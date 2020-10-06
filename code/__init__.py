@@ -18,8 +18,9 @@ def main():
 def home():
     longitude = []
     latitude = []
+   
     sql = '''
-        select longitude, latitude from busan_store where law_dong_name= '구서동' limit 5
+        create table test
     '''
     cursor.execute(sql)
     result = cursor.fetchall()
@@ -35,20 +36,21 @@ def getposition():
     longitude = []
     latitude = []
     keyword = request.form['keyword']
-    print(keyword)
     sql = '''
-        select longitude, latitude from busan_store where law_dong_name= %s limit 5
+        SELECT longitude, latitude from busan_store where law_dong_name = %s limit 5
     '''
     cursor.execute(sql,keyword)
     result = cursor.fetchall()
     for tup in result:
-        longitude.insert(i, tup[0])
-        latitude.insert(i,tup[1])
-        i = i + 1
+        longitude.append(tup[0])
+        latitude.append(tup[1])
     storelen=len(result)
-    return jsonify(longitude=longitude,latitude=latitude)
+    db.close()
+    print(longitude)
+    print(latitude)
+    return jsonify(data=result)
 
-db.close()
+
 
 if(__name__)=='__main__':
     app.run(host='0.0.0.0', debug=True)
