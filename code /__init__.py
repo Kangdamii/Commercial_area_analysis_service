@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template, url_for, jsonify
+import json
 import pymysql
 from openpyxl import Workbook
 from openpyxl import load_workbook
@@ -16,41 +17,26 @@ def main():
 
 @app.route("/test")
 def home():
-    longitude = []
-    latitude = []
-   
-    sql = '''
-        create table test
-    '''
-    cursor.execute(sql)
-    result = cursor.fetchall()
-    for tup in result:
-        longitude.insert(i, tup[0])
-        latitude.insert(i,tup[1])
-        i = i + 1
-    storelen=len(result)
-    return render_template("category.html", longitude=longitude, latitude=latitude)
+    return render_template("category.html")
 
 @app.route("/getposition", methods=['GET', 'POST'])
 def getposition():
-    longitude = []
-    latitude = []
+    positions = {}
     keyword = request.form['keyword']
     sql = '''
-        SELECT longitude, latitude from busan_store where law_dong_name = %s limit 5
+        SELECT id,longitude, latitude from busan_store where law_dong_name = %s limit 5
     '''
     cursor.execute(sql,keyword)
     result = cursor.fetchall()
     for tup in result:
-        longitude.append(tup[0])
-        latitude.append(tup[1])
-    storelen=len(result)
-    db.close()
-    print(longitude)
-    print(latitude)
-    return jsonify(data=result)
-
-
+        storeId = tup[0]
+        longitude = tup[1]
+        latitude = tup[2]
+        positions[storeId]={"positions":{"longitude":longitude,"latitude":latitude}}    
+    # for item in content:
+    # print(item["longitude"])
+    jsonPos = json.dumps(positions)     #dictionary to json
+    return jsonify(data = jsonPos)
 
 if(__name__)=='__main__':
     app.run(host='0.0.0.0', debug=True)
