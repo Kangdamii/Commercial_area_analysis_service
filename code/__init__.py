@@ -15,28 +15,30 @@ cursor = db.cursor()
 def main():
     return render_template("main.html")
 
-@app.route("/test")
-def home():
-    return render_template("category.html")
+@app.route('/request', methods =['POST'])
+def query():
+    value = request.form['SensorID']
+    sql = "select id from busan_store where law_dong_name  = %s limit 4"
+    cursor.execute(sql,value)
+    data_list=cursor.fetchall()       
+    data= data_list[0]            
+    jsondata=json.dumps(data[0]) 
+    return jsondata
 
 @app.route("/getposition", methods=['GET', 'POST'])
 def getposition():
-    positions = {}
+    ids = []
+    longitude = []
+    latitude = []
     keyword = request.form['keyword']
     sql = '''
-        SELECT id,longitude, latitude from busan_store where law_dong_name = %s limit 5
+        SELECT name,longitude,latitude from busan_store where law_dong_name = %s limit 5
     '''
     cursor.execute(sql,keyword)
-    result = cursor.fetchall()
-    for tup in result:
-        storeId = tup[0]
-        longitude = tup[1]
-        latitude = tup[2]
-        positions[storeId]={"positions":{"longitude":longitude,"latitude":latitude}}    
-    # for item in content:
-    # print(item["longitude"])
-    jsonPos = json.dumps(positions)     #dictionary to json
-    return jsonify(data = jsonPos)
+    data_list=cursor.fetchall()           
+    jsondata=json.dumps(data_list) 
+    return jsondata
+
 
 if(__name__)=='__main__':
     app.run(host='0.0.0.0', debug=True)
