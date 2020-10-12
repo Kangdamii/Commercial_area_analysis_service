@@ -15,30 +15,20 @@ cursor = db.cursor()
 def main():
     return render_template("main.html")
 
-@app.route('/request', methods =['POST'])
-def query():
-    value = request.form['SensorID']
-    sql = "select id from busan_store where law_dong_name  = %s limit 4"
-    cursor.execute(sql,value)
-    data_list=cursor.fetchall()       
-    data= data_list[0]            
-    jsondata=json.dumps(data[0]) 
-    return jsondata
-
 @app.route("/getposition", methods=['GET', 'POST'])
 def getposition():
     ids = []
     longitude = []
     latitude = []
     keyword = request.form['keyword']
+    division = request.form['division']
     sql = '''
-        SELECT name,longitude,latitude from busan_store where law_dong_name = %s limit 5
+        SELECT name,longitude,latitude from new_busan_store where law_dong_name = %s and division = %s
     '''
-    cursor.execute(sql,keyword)
+    cursor.execute(sql,(keyword,division))
     data_list=cursor.fetchall()           
     jsondata=json.dumps(data_list) 
     return jsondata
-
 
 if(__name__)=='__main__':
     app.run(host='0.0.0.0', debug=True)
