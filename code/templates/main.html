@@ -2,11 +2,16 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>키워드로 장소검색하고 목록으로 표출하기</title>
+    <title>상권분석</title>
     <style>
+/* .customoverlay {position:relative;bottom:85px;border-radius:6px;border: 1px solid #ccc;border-bottom:2px solid #ddd;} */
+/* .customoverlay:nth-of-type(n) {border:0; box-shadow:0px 1px 2px #888;} */
+.customoverlay a {display:block;text-decoration:none;color:#000;text-align:center;border-radius:6px;font-size:14px;font-weight:bold;overflow:hidden;background: #d95050;background: #d95050 url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/arrow_white.png) no-repeat right 14px center;}
+.customoverlay .title {display:block;text-align:center;background:#fff;margin-right:35px;padding:10px 15px;font-size:14px;font-weight:bold;}
+.customoverlay:after {content:'';position:absolute;margin-left:-12px;left:50%;bottom:-12px;width:22px;height:12px;background:url('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/vertex_white.png')}
 .map_wrap, .map_wrap * {margin:0;padding:0;font-family:'Malgun Gothic',dotum,'돋움',sans-serif;font-size:12px;}
 .map_wrap a, .map_wrap a:hover, .map_wrap a:active{color:#000;text-decoration: none;}
-.map_wrap {position:relative;width:100%;height:500px;}
+.map_wrap {position:relative;width:100%;height:100%;}
 #menu_wrap {position:absolute;top:0;left:0;bottom:0;width:250px;margin:10px 0 30px 10px;padding:5px;overflow-y:auto;background:rgba(255, 255, 255, 0.7);z-index: 1;font-size:12px;border-radius: 10px;}
 .bg_white {background:#fff;}
 #menu_wrap hr {display: block; height: 1px;border: 0; border-top: 2px solid #5F5F5F;margin:3px 0;}
@@ -40,6 +45,62 @@
 #pagination {margin:10px auto;text-align: center;}
 #pagination a {display:inline-block;margin-right:10px;}
 #pagination .on {font-weight: bold; cursor: default;color:#777;}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  vertical-align:middle;
+}
+/* Hide default HTML checkbox */
+.switch input {display:none;}
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+input:checked + .slider {
+  background-color: #2196F3;
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+.slider.round:before {
+  border-radius: 50%;
+}
+p {
+	margin:0px;
+	display:inline-block;
+	font-size:15px;
+	font-weight:bold;
+}
 </style>
 </head>
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css">
@@ -49,14 +110,20 @@
 <body>
 <div class="map_wrap">
     <div id="map" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>
-    <div id="menu_wrap" class="bg_white" style="height:200px">
+    <!-- <span>
+        <label class="switch">
+        <input type="checkbox" value = "toggle" checked="checked" onclick = "displayPopulations(Event)">
+        <span class="slider round"></span>
+        </label>
+        <p >ON</p>
+        <p style="display:none;">OFF</p>
+    </span> -->
+    <div id="menu_wrap" class="bg_white" style="height:100px">
         <div class="option">
             <div>
                 <form onsubmit="searchPlaces(event); return false;">
-                    키워드 : <input type="text" value="금사동" id="keyword" size="15"> 
+                    키워드 : <input type="text" value="장전동" id="keyword" size="15"> 
                     <button type="submit">검색하기</button> 
-
-                    
                 </form>
             </div>
         </div>
@@ -73,36 +140,56 @@
                         Please select a valid category.
                     </div>
             </div>
-        </div>
+        </div> 
     </div>
-
-
 </div>
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=e5fe99eabf6c62865f3e5e356aa61fb6&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=e5fe99eabf6c62865f3e5e356aa61fb6&libraries=clusterer"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-
+<!-- <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script> -->
 <script>
+// var check = $("input[type='checkbox']");
+// check.click(function(){
+// 	$("p").toggle();
+// });
+
+
 // 마커를 담을 배열입니다
 var markers = [];
-
+var positions=[];
+var populationsMarker = [];
 var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
     mapOption = {
         center: new kakao.maps.LatLng(35.24675038,129.0879513), // 지도의 중심좌표
-        level: 3 // 지도의 확대 레벨
+        level: 7// 지도의 확대 레벨
     };  
 
+
+
+var circle = new kakao.maps.CustomOverlay();
 // 지도를 생성합니다    
 var map = new kakao.maps.Map(mapContainer, mapOption); 
-
+// map.setMinLevel(5);
 // 장소 검색 객체를 생성합니다
 var ps = new kakao.maps.services.Places();  
 
 // 검색 결과 목록이나 마커를 클릭했을 때 장소명을 표출할 인포윈도우를 생성합니다
 var infowindow = new kakao.maps.InfoWindow({zIndex:1});
-
-// 키워드로 장소를 검색합니다
-searchPlaces(event);
+// 인구수 출력 overlay
+var customOverlay = new kakao.maps.CustomOverlay({
+    map:map,
+    yAnchor: 1 
+    });
+var circle = new kakao.maps.Circle({
+    radius: 3000, // 미터 단위의 원의 반지름입니다 
+    strokeWeight: 0, // 선의 두께입니다 
+    strokeColor: '#75B8FA', // 선의 색깔입니다
+    strokeOpacity: 1, // 선의 불투명도 입니다 1에서 0 사이의 값이며 0에 가까울수록 투명합니다
+    fillColor: '#CFE7FF', // 채우기 색깔입니다
+    fillOpacity: 0.7  // 채우기 불투명도 입니다   
+    });
+displayPopulations("24M",map.getCenter());
 
 // 키워드 검색을 요청하는 함수입니다
 function searchPlaces(event) {
@@ -110,8 +197,8 @@ function searchPlaces(event) {
     var division = target.options[target.selectedIndex].value;     // 옵션 value 값
     event.preventDefault();
     var keyword = document.getElementById('keyword').value;
-    var positions = [];
     var posObj = {};
+    positions=[];
     if (!keyword.replace(/^\s+|\s+$/g, '')) {
         alert('키워드를 입력해주세요!');
         return false;
@@ -122,7 +209,7 @@ function searchPlaces(event) {
     }
     $.ajax({
                 type: 'POST',
-                url: 'http://192.168.0.5:5000/getposition',
+                url: 'http://192.168.0.10:5000/getposition',
                 data: {
                     keyword: keyword,
                     division: division
@@ -141,23 +228,94 @@ function searchPlaces(event) {
                         positions[positions.length]=posObj;
                         posObj = {};
                     }
-                    displayPlaces(positions);
+                    displayInfo(positions,keyword);
+                    // getPopulations(keyword);
+                    // displayPlaces(positions);
                 },
                 error:function(){
                     alert("검색어를 다시 입력해주세요");
                     }
             });
+}
+
+function displayInfo(positions,keyword){
+    removeOverlay();
+    removeMarker();
+    bounds = new kakao.maps.LatLngBounds();
+    for (var i = 0; i < positions.length; i++) {
+        bounds.extend(positions[i].latlng);
+    }
+    map.setBounds(bounds);
+    map.setLevel(7);
+    var center = map.getCenter();
+    var popul = getPopulations(keyword);
+    displayPopulations(popul,center);
+    kakao.maps.event.addListener(map, 'zoom_changed', function() {   
+    var level = map.getLevel();     
+    if(level<=5){
+        removeOverlay();
+        displayPlaces(positions);
+    }
+    else if(level>5 && level<=7){
+        removeOverlay();
+        removeMarker();
+        displayPopulations(popul,center);
+    }
+    else{
+        removeOverlay();
+        removeMarker();
+        displayPopulations(popul,center)
+    }
+    
+});
 
 }
 
+function getPopulations(keyword){
+    var popul;
+    $.ajax({
+                type: 'POST',
+                async: false, 
+                url: 'http://192.168.0.10:5000/getpopulation',
+                data: {
+                    keyword: keyword
+                },
+                dataType: 'JSON',
+                success: function(data){
+                    // if(data == ""){
+                    //     alert("검색어를 다시 입력해주세요.");
+                    //     return false;
+                    // }
+                    popul = data;
+                },
+                error:function(){
+                    alert("검색어를 다시 입력해주세요");
+                    }
+            });
+    return popul;
+}
+
+function displayPopulations(popul,center){
+    var content = '<div class="customoverlay">' +
+    '    <span class="title">'+popul+'</span>' +
+    '  </a>' +
+    '</div>';
+
+    customOverlay.setContent(content);
+    customOverlay.setPosition(center);
+    circle.setPosition(center);
+    circle.setMap(map);
+    customOverlay.setMap(map);
+}
+
+
 // 검색 결과 목록과 마커를 표출하는 함수입니다
 function displayPlaces(positions) {
-    bounds = new kakao.maps.LatLngBounds();
+    // bounds = new kakao.maps.LatLngBounds();
     removeMarker();
-
     for (var i = 0; i < positions.length; i++) {
         marker = addMarker(positions[i].latlng, i), 
-        bounds.extend(positions[i].latlng);
+        // bounds.extend(positions[i].latlng);
         (function(marker, title) {
             kakao.maps.event.addListener(marker, 'mouseover', function() {
                 displayInfowindow(marker, title);
@@ -169,7 +327,7 @@ function displayPlaces(positions) {
             
         })(marker, positions[i].storeName);
     }
-    map.setBounds(bounds);
+    // map.setBounds(bounds);
 }
 
 function addMarker(position, idx, title) {
@@ -188,7 +346,6 @@ function addMarker(position, idx, title) {
 
     marker.setMap(map); // 지도 위에 마커를 표출합니다
     markers.push(marker);  // 배열에 생성된 마커를 추가합니다
-
     return marker;
 }
 function displayInfowindow(marker, title) {
@@ -205,6 +362,10 @@ function removeMarker() {
     markers = [];
 }
 
+function removeOverlay(){
+    circle.setMap(null);
+    customOverlay.setMap(null);
+}
 </script>
 </body>
 </html>
