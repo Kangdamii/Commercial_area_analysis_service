@@ -22,10 +22,35 @@ def getposition():
     latitude = []
     keyword = request.form['keyword']
     division = request.form['division']
-    sql = '''
-        SELECT name,longitude,latitude from new_busan_store where law_dong_name = %s and division = %s
-    '''
-    cursor.execute(sql,(keyword,division))
+    newKeyword = '%'+keyword+'%'
+    # sql = '''   SELECT name, sigoongo_name, admin_dong_name,longitude,latitude from busan_store
+    #             where division = %s and admin_dong_name in
+    #             (SELECT distinct dong from dong_info where goo like %s)
+    #     '''
+    sql = '''   SELECT name,doro_adr, longitude,latitude from busan_store
+                where division = %s and admin_dong_name = %s
+        '''
+    cursor.execute(sql,(division,keyword))
+    data_list=cursor.fetchall()           
+    jsondata=json.dumps(data_list) 
+    return jsondata
+
+@app.route("/getdongName", methods=['GET', 'POST'])
+def getdongName():
+    keyword = request.form['keyword'] 
+    newKeyword = '%'+keyword+'%'
+    sql = "SELECT  distinct dong from dong_info where goo like %s"
+    cursor.execute(sql,newKeyword)
+    data_list=cursor.fetchall()       
+    jsondata=json.dumps(data_list) 
+    return jsondata
+
+
+@app.route("/getpopulation", methods=['GET', 'POST'])
+def getpopulation():
+    keyword = request.form['keyword'] 
+    sql = "SELECT population from busan_admin_population where dong = %s"
+    cursor.execute(sql,keyword)
     data_list=cursor.fetchall()           
     jsondata=json.dumps(data_list) 
     return jsondata

@@ -122,7 +122,7 @@ p {
         <div class="option">
             <div>
                 <form onsubmit="searchPlaces(event); return false;">
-                    키워드 : <input type="text" value="장전동" id="keyword" size="15"> 
+                    키워드 : <input type="text" value="장전2동" id="keyword" size="15"> 
                     <button type="submit">검색하기</button> 
                 </form>
             </div>
@@ -157,6 +157,8 @@ p {
 
 // 마커를 담을 배열입니다
 var markers = [];
+var overlays = [];
+var polygons = [];
 var positions=[];
 var populationsMarker = [];
 var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
@@ -177,10 +179,7 @@ var ps = new kakao.maps.services.Places();
 // 검색 결과 목록이나 마커를 클릭했을 때 장소명을 표출할 인포윈도우를 생성합니다
 var infowindow = new kakao.maps.InfoWindow({zIndex:1});
 // 인구수 출력 overlay
-var customOverlay = new kakao.maps.CustomOverlay({
-    map:map,
-    yAnchor: 1 
-    });
+
 var circle = new kakao.maps.Circle({
     radius: 3000, // 미터 단위의 원의 반지름입니다 
     strokeWeight: 0, // 선의 두께입니다 
@@ -189,8 +188,8 @@ var circle = new kakao.maps.Circle({
     fillColor: '#CFE7FF', // 채우기 색깔입니다
     fillOpacity: 0.7  // 채우기 불투명도 입니다   
     });
-displayPopulations("24M",map.getCenter());
-
+// displayPopulations("14455",map.getCenter());
+drawPolygon();
 // 키워드 검색을 요청하는 함수입니다
 function searchPlaces(event) {
     var target = document.getElementById("업종");
@@ -209,7 +208,7 @@ function searchPlaces(event) {
     }
     $.ajax({
                 type: 'POST',
-                url: 'http://192.168.0.10:5000/getposition',
+                url: 'http://192.168.0.14:5000/getposition',
                 data: {
                     keyword: keyword,
                     division: division
@@ -222,8 +221,9 @@ function searchPlaces(event) {
                     }
                     for(var i =0;i<data.length;i++){
                         posObj['storeName'] = data[i][0];
-                        lng = data[i][1];
-                        lat = data[i][2];
+                        posObj['address'] = data[i][1];
+                        lng = data[i][2];
+                        lat = data[i][3];
                         posObj['latlng'] = new kakao.maps.LatLng(lat, lng);  
                         positions[positions.length]=posObj;
                         posObj = {};
@@ -276,7 +276,7 @@ function getPopulations(keyword){
     $.ajax({
                 type: 'POST',
                 async: false, 
-                url: 'http://192.168.0.10:5000/getpopulation',
+                url: 'http://192.168.0.14:5000/getpopulation',
                 data: {
                     keyword: keyword
                 },
@@ -308,6 +308,79 @@ function displayPopulations(popul,center){
     customOverlay.setMap(map);
 }
 
+function drawPolygon(){
+    $.getJSON("/geo.json", function(geojson)
+    {
+        var data = geojson.features;
+        var name = '';
+
+        $.each(data, function(index, val)
+        {
+            name = val.properties.SIG_KOR_NM;
+
+            if(val.geometry.type == "MultiPolygon")
+            {
+                displayArea(name, code, val.geometry.coordinates,true);
+            }
+            else
+            {
+                displayArea(name, code, val.geometry.coordinates,false);
+            }
+        });
+    });
+}
+
+function makePolygon(coordinates){
+    var polygonPath = [];
+
+    $.each(coordinates[0],function(index, coordinate)
+    {
+        polygonPath.push(new kakao.maps.LatLng(coordinate[1],coordinate[0]));
+    });
+    return new kakao.maps.Polygon({
+        path:polygonPath,
+        strokeWeight:1,
+        strokeColor:'#004c80',
+        strokeOpacity:0.8,
+        strokeStyle:'longdash',
+        fillColor:'#A2FF99',
+        fillOpacity:0.2
+    });
+}
+
+function makeMultiPolygon(coordinates){
+    var polygonPath = [];
+
+    $.each(coordinates, function(index, val2)
+    {
+        var coordinates2 = [];
+        $.each(val2[0], function(index2, coordinate)
+        {
+            coordinates2.push(new kakao.maps.LatLng(coordinate[1],coordinate[0]));
+        });
+        polygonPath.push(coordinates2);
+    });
+        return new kakao.maps.Polygon({
+            path:polygonPath,
+            strokeWeight:1,
+            strokeColor:'#004c80',
+            strokeOpacity:0.8,
+            strokeStyle:'longdash',
+            fillColor:'#A2FF99',
+            fillOpacity:0.2
+        });
+}
+
+function displayArea(name,code,coordinates,multi){
+    var polygon;
+    if(multi){
+        polygon=makeMultiPolygon(coordinates);
+    }
+    else{
+        polygon = makePolygon(coordinates);
+    }
+    polygon.setMap(map);
+}
 
 // 검색 결과 목록과 마커를 표출하는 함수입니다
 function displayPlaces(positions) {
@@ -316,16 +389,16 @@ function displayPlaces(positions) {
     for (var i = 0; i < positions.length; i++) {
         marker = addMarker(positions[i].latlng, i), 
         // bounds.extend(positions[i].latlng);
-        (function(marker, title) {
+        (function(marker, title, address) {
             kakao.maps.event.addListener(marker, 'mouseover', function() {
-                displayInfowindow(marker, title);
+                displayInfowindow(marker, title, address);
             });
 
             kakao.maps.event.addListener(marker, 'mouseout', function() {
                 infowindow.close();
             });
             
-        })(marker, positions[i].storeName);
+        })(marker, positions[i].storeName, positions[i].address);
     }
     // map.setBounds(bounds);
 }
@@ -348,9 +421,10 @@ function addMarker(position, idx, title) {
     markers.push(marker);  // 배열에 생성된 마커를 추가합니다
     return marker;
 }
-function displayInfowindow(marker, title) {
-    var content = '<div style="padding:5px;z-index:1;">' + title + '</div>';
-
+function displayInfowindow(marker, title, address) {
+    var contentTitle = '<div style="padding:5px;z-index:1;">' + title + '</div>';
+    var contentAddress = '<div style="padding:3px;z-index:1;width:240px">' + address + '</div>';
+    var content = contentTitle + contentAddress;
     infowindow.setContent(content);
     infowindow.open(map, marker);
 }
