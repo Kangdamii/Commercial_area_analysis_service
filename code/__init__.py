@@ -15,6 +15,10 @@ cursor = db.cursor()
 def main():
     return render_template("main.html")
 
+@app.route("/test")
+def test():
+    return render_template("map.html")
+
 @app.route("/getposition", methods=['GET', 'POST'])
 def getposition():
     ids = []
@@ -23,29 +27,15 @@ def getposition():
     keyword = request.form['keyword']
     division = request.form['division']
     newKeyword = '%'+keyword+'%'
-<<<<<<< HEAD
-    sql = '''   SELECT name,doro_adr,longitude,latitude from busan_store
+    sql = '''   SELECT name,doro_adr,longitude,latitude, admin_dong_name from busan_store
                 where division = %s and admin_dong_name in
-                (SELECT dong from busan_admin_population where googoon like %s)
+                (SELECT dong from busan_dong_population where googoon like %s)
         '''
-    # sql = '''   SELECT name,doro_adr, longitude,latitude from busan_store
-    #             where division = %s and admin_dong_name = %s
-    #     '''
-=======
-    # sql = '''   SELECT name, sigoongo_name, admin_dong_name,longitude,latitude from busan_store
-    #             where division = %s and admin_dong_name in
-    #             (SELECT distinct dong from dong_info where goo like %s)
-    #     '''
-    sql = '''   SELECT name,doro_adr, longitude,latitude from busan_store
-                where division = %s and admin_dong_name = %s
-        '''
->>>>>>> 4bb19569e2650f48591c4a08317b44fb47420af5
     cursor.execute(sql,(division,keyword))
     data_list=cursor.fetchall()           
     jsondata=json.dumps(data_list) 
     return jsondata
 
-<<<<<<< HEAD
 @app.route("/getcoordinates", methods=['GET', 'POST'])
 def getcoordinates():
     keyword = request.form['keyword'] 
@@ -58,27 +48,25 @@ def getcoordinates():
 @app.route("/getpopulation", methods=['GET', 'POST'])
 def getpopulation():
     keyword = request.form['keyword'] 
-    sql = "SELECT dong,population,longitude,latitude from busan_admin_population where googoon like %s"
-=======
-@app.route("/getdongName", methods=['GET', 'POST'])
-def getdongName():
-    keyword = request.form['keyword'] 
-    newKeyword = '%'+keyword+'%'
-    sql = "SELECT  distinct dong from dong_info where goo like %s"
-    cursor.execute(sql,newKeyword)
-    data_list=cursor.fetchall()       
-    jsondata=json.dumps(data_list) 
-    return jsondata
-
-
-@app.route("/getpopulation", methods=['GET', 'POST'])
-def getpopulation():
-    keyword = request.form['keyword'] 
-    sql = "SELECT population from busan_admin_population where dong = %s"
->>>>>>> 4bb19569e2650f48591c4a08317b44fb47420af5
+    sql = "SELECT dong,population from busan_dong_population where dong like %s"
     cursor.execute(sql,keyword)
     data_list=cursor.fetchall()           
     jsondata=json.dumps(data_list) 
+    return jsondata
+
+@app.route("/getchartData", methods=['GET', 'POST'])
+def getchartData():
+    keyword = request.form['keyword']
+    percent = '%'
+    new_key = percent.join(keyword)
+    sql = '''
+            SELECT goo, dong, graph_ex_floating_population, graph_population, graph_ex_purchase_pow, graph_profit, graph_competitor,
+            graph_avg_ex_floating_population, graph_avg_population, graph_avg_ex_purchase_pow, graph_avg_profit, graph_avg_competitor,grade
+            from busan_dong_analysis_graph where dong like %s'''
+    cursor.execute(sql,new_key)
+    data_list=cursor.fetchall()           
+    jsondata=json.dumps(data_list) 
+    
     return jsondata
 
 if(__name__)=='__main__':
